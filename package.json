@@ -9,9 +9,12 @@
     "@types/react-dom": "16.8.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
+    "react-redux": "^7.0.2",
     "react-router-dom": "^5.0.0",
     "react-scripts": "2.1.8",
     "react-transition-group": "^3.0.0",
+    "redux": "^4.0.1",
+    "redux-thunk": "^2.3.0",
     "typescript": "3.4.3",
     "url-search-params-polyfill": "^5.1.0"
   },
@@ -31,8 +34,10 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@types/react-redux": "^7.0.6",
     "@types/react-router-dom": "^4.3.2",
     "@types/react-transition-group": "^2.9.0",
+    "@types/redux-thunk": "^2.1.0",
     "babel-loader": "^8.0.5",
     "tslint": "^5.15.0",
     "tslint-config-prettier": "^1.18.0",
