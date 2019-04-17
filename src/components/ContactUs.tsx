@@ -1,11 +1,22 @@
 import * as React from "react";
-import { Form, minLength, required } from "./Form";
+import { Form, minLength, required, IValues, ISubmitResult } from "./Form";
 
-const ContactUs: React.SFC<{}> = () => {
+interface IProps {
+  onSubmit: (values: IValues) => Promise<ISubmitResult>;
+}
+
+const ContactUs: React.SFC<IProps> = props => {
+  const handleSubmit = async (values: IValues): Promise<ISubmitResult> => {
+    const result = await props.onSubmit(values);
+    return result;
+  };
   return (
     <Form
       defaultValues={{ name: "", email: "", reason: "Support", notes: "" }}
-      validationRules={{ email: { validator: required } }}
+      validationRules={{
+        email: { validator: required }
+      }}
+      onSubmit={handleSubmit}
     >
       <Form.Field name="name" label="Your name" type="Text" />
       <Form.Field name="email" label="Your email" type="Text" />

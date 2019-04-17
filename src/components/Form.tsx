@@ -3,11 +3,14 @@ import * as React from "react";
 interface IFormProps {
   defaultValues: IValues;
   validationRules: IValidationProps;
+  onSubmit: (values: IValues) => Promise<ISubmitResult>;
 }
 
 interface IFormState {
   values: IValues;
   errors: IErrors;
+  submitting: boolean;
+  submitted: boolean;
 }
 
 export interface IValues {
@@ -25,9 +28,16 @@ interface IFieldProps {
   options?: string[];
 }
 
+export interface ISubmitResult {
+  success: boolean;
+  errors?: IErrors;
+}
+
 interface IFormContext {
+  errors: IErrors;
   values: IValues;
   setValue?: (fieldName: string, value: any) => void;
+  validate?: (fieldName: string, value: any) => void;
 }
 
 export type Validator = (
@@ -65,7 +75,10 @@ interface IValidationProps {
   [key: string]: IValidation | IValidation[];
 }
 
-const FormContext = React.createContext<IFormContext>({ values: {} });
+const FormContext = React.createContext<IFormContext>({
+  values: {},
+  errors: {}
+});
 
 export class Form extends React.Component<IFormProps, IFormState> {
   public static Field: React.SFC<IFieldProps> = props => {
@@ -80,6 +93,19 @@ export class Form extends React.Component<IFormProps, IFormState> {
         context.setValue(props.name, e.currentTarget.value);
       }
     };
+
+    const handleBlur = (
+      e:
+        | React.FocusEvent<HTMLInputElement>
+        | React.FocusEvent<HTMLTextAreaElement>
+        | React.FocusEvent<HTMLSelectElement>,
+      context: IFormContext
+    ) => {
+      if (context.validate) {
+        context.validate(props.name, e.currentTarget.value);
+      }
+    };
+
     const { name, label, type, options } = props;
     return (
       <FormContext.Consumer>
@@ -92,6 +118,7 @@ export class Form extends React.Component<IFormProps, IFormState> {
                 id={name}
                 value={context.values[name]}
                 onChange={e => handleChange(e, context)}
+                onBlur={e => handleBlur(e, context)}
               />
             )}
             {type === "TextArea" && (
@@ -99,12 +126,14 @@ export class Form extends React.Component<IFormProps, IFormState> {
                 id={name}
                 value={context.values[name]}
                 onChange={e => handleChange(e, context)}
+                onBlur={e => handleBlur(e, context)}
               />
             )}
             {type === "Select" && (
               <select
                 value={context.values[name]}
                 onChange={e => handleChange(e, context)}
+                onBlur={e => handleBlur(e, context)}
               >
                 {options &&
                   options.map(option => (
@@ -114,6 +143,13 @@ export class Form extends React.Component<IFormProps, IFormState> {
                   ))}
               </select>
             )}
+            {context.errors[name] &&
+              context.errors[name].length > 0 &&
+              context.errors[name].map(error => (
+                <span key={error} className="form-error">
+                  {error}
+                </span>
+              ))}
           </div>
         )}
       </FormContext.Consumer>
@@ -122,28 +158,77 @@ export class Form extends React.Component<IFormProps, IFormState> {
 
   public constructor(props: IFormProps) {
     super(props);
+    const errors: IErrors = {};
+    Object.keys(props.defaultValues).forEach(fieldName => {
+      errors[fieldName] = [];
+    });
+
     this.state = {
-      values: props.defaultValues
+      errors,
+      values: props.defaultValues,
+      submitted: false,
+      submitting: false
     };
   }
 
   public render() {
     const context: IFormContext = {
+      errors: this.state.errors,
       setValue: this.setValue,
-      values: this.state.values
+      values: this.state.values,
+      validate: this.validate
     };
 
     return (
       <FormContext.Provider value={context}>
-        <form className="form" noValidate={true}>
+        <form
+          className="form"
+          noValidate={true}
+          onSubmit={e => this.handleSubmit(e)}
+        >
           {this.props.children}
+          <div className="form-group">
+            <button
+              type="submit"
+              disabled={this.state.submitted || this.state.submitting}
+            >
+              Submit
+            </button>
+          </div>
         </form>
       </FormContext.Provider>
     );
   }
 
+  private handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault;
+  };
+
   private setValue = (fieldName: string, value: any) => {
     const newValues = { ...this.state.values, [fieldName]: value };
     this.setState({ values: newValues });
+  };
+
+  private validate = (fieldName: string, value: any): string[] => {
+    const rules = this.props.validationRules[fieldName];
+    const errors: string[] = [];
+    if (Array.isArray(rules)) {
+      rules.forEach(rule => {
+        const error = rule.validator(fieldName, this.state.values, rule.args);
+        if (error) {
+          errors.push(error);
+        }
+      });
+    } else {
+      if (rules) {
+        const error = rules.validator(fieldName, this.state.values, rules.args);
+        if (error) {
+          errors.push(error);
+        }
+      }
+    }
+    const newErrors = { ...this.state.errors, [fieldName]: errors };
+    this.setState({ errors: newErrors });
+    return errors;
   };
 }
